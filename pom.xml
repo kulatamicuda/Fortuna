@@ -9,10 +9,12 @@
 	<properties>
 		<java.version>1.8</java.version>
 		<junit.version>4.10</junit.version>
+		<maven.sources.version>2.2.1</maven.sources.version>
+		<maven.javadoc.version>2.10.1</maven.javadoc.version>
+		<maven.compiler.version>3.2</maven.compiler.version>
 	</properties>
-
-
-         <!-- Support for compilation under java 8 -->
+	
+    <!-- Support for compilation under java 8 -->
 	<profiles>
 		<profile>
 			<id>java8-javadoc</id>
@@ -26,19 +28,21 @@
 	</profiles>
 	<build>
 		<plugins>
-                           <!-- Set up java version -->
+            <!-- Set up java version -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.version}</version>
 				<configuration>
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 				</configuration>
 			</plugin>
+            <!-- Create java-sources jar -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>2.2.1</version>
+				<version>${maven.sources.version}</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -49,31 +53,18 @@
 					</execution>
 				</executions>
 			</plugin>
-                           <!-- Create java-sources jar -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>jar-no-fork</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-                           <!-- Create javadoc jar -->
+            <!-- Create javadoc jar -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven.javadoc.version}</version>
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
 						<goals>
 							<goal>jar</goal>
 						</goals>
-                                                      <!-- Disable doclint checks to build it under java 8 javadoc -->
+                        <!-- Disable doclint checks to build it under java 8 javadoc -->
 						<configuration>
 							<additionalparam>${javadoc.param}</additionalparam>
 						</configuration>
