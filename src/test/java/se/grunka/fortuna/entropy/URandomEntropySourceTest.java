@@ -23,7 +23,11 @@ public class URandomEntropySourceTest {
 
     @Test
     public void shouldAddUptime() throws Exception {
-        target.event(
+        String osName = System.getProperty("os.name").toLowerCase();
+        // this test makes sense only on Unix systems
+        if (OS.indexOf("nix") >= 0 || OS.indexOf("nux") >= 0 || OS
+				.indexOf("aix") > 0) {
+            target.event(
                 new EventScheduler() {
                     @Override
                     public void schedule(long delay, TimeUnit timeUnit) {
@@ -38,8 +42,9 @@ public class URandomEntropySourceTest {
                         adds++;
                     }
                 }
-        );
-        assertEquals(1, schedules);
-        assertEquals(1, adds);
+            );
+            assertEquals(1, schedules);
+            assertEquals(1, adds);
+        }
     }
 }
