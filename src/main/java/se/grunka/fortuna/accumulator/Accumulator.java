@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import se.grunka.fortuna.Pool;
 
-public class Accumulator {
+public class Accumulator implements AutoCloseable {
     private final Map<Integer, Context> eventContexts = new ConcurrentHashMap<Integer, Context>();
     private final AtomicInteger sourceCount = new AtomicInteger(0);
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
@@ -37,5 +37,28 @@ public class Accumulator {
         eventContexts.put(sourceId, context);
         eventScheduler.schedule(0, TimeUnit.MILLISECONDS);
     }
+    
+    @Override
+    public void close() {
+        shutdownAndAwaitTermination(scheduler);
+    }
+    
+        private void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown(); // Disable new tasks from being submitted
+        try {
+            // Wait a while for existing tasks to terminate
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow(); // Cancel currently executing tasks
+                // Wait a while for tasks to respond to being cancelled
+                pool.awaitTermination(10, TimeUnit.SECONDS);
+            }
+        } catch (InterruptedException ie) {
+            // (Re-)Cancel if current thread also interrupted
+            pool.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
+        }
+    }
+
 
 }
