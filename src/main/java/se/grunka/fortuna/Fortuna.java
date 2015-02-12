@@ -15,7 +15,7 @@ import se.grunka.fortuna.entropy.ThreadTimeEntropySource;
 import se.grunka.fortuna.entropy.URandomEntropySource;
 import se.grunka.fortuna.entropy.UptimeEntropySource;
 
-public class Fortuna extends Random {
+public class Fortuna extends Random, implements AutoCloseable {
 	private static final long serialVersionUID = -5683237087539527067L;
 	private static final int MIN_POOL_SIZE = 64;
 	private static final int[] POWERS_OF_TWO = initializePowersOfTwo();
@@ -33,37 +33,46 @@ public class Fortuna extends Random {
 	private final Generator generator;
 	private final Pool[] pools;
 	private final ReentrantLock lock = new ReentrantLock();
+	private final Accumulator accumulator;
 
-	public static Fortuna createInstance() {
-		Pool[] pools = new Pool[32];
-		for (int pool = 0; pool < pools.length; pool++) {
-			pools[pool] = new Pool();
-		}
-		Accumulator accumulator = new Accumulator(pools);
-		accumulator.addSource(new SchedulingEntropySource());
-		accumulator.addSource(new GarbageCollectorEntropySource());
-		accumulator.addSource(new LoadAverageEntropySource());
-		accumulator.addSource(new FreeMemoryEntropySource());
-		accumulator.addSource(new ThreadTimeEntropySource());
-		accumulator.addSource(new UptimeEntropySource());
-		if (Files.exists(Paths.get("/dev/urandom"))) {
-			accumulator.addSource(new URandomEntropySource());
-		}
-		while (pools[0].size() < MIN_POOL_SIZE) {
-			try {
-				Thread.sleep(10);
-			} catch (InterruptedException e) {
-				throw new Error("Interrupted while waiting for initialization",
-						e);
-			}
-		}
-		return new Fortuna(new Generator(), pools);
-	}
+    public static Fortuna createInstance() {
+        Pool[] pools = new Pool[32];
+        for (int pool = 0; pool < pools.length; pool++) {
+            pools[pool] = new Pool();
+        }
+        Accumulator accumulator = new Accumulator(pools);
+        try {
+            accumulator.addSource(new SchedulingEntropySource());
+            accumulator.addSource(new GarbageCollectorEntropySource());
+            accumulator.addSource(new LoadAverageEntropySource());
+            accumulator.addSource(new FreeMemoryEntropySource());
+            accumulator.addSource(new ThreadTimeEntropySource());
+            accumulator.addSource(new UptimeEntropySource());
+            if (Files.exists(Paths.get("/dev/urandom"))) {
+                accumulator.addSource(new URandomEntropySource());
+            }
+            while (pools[0].size() < MIN_POOL_SIZE) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    accumulator.close();
+                    throw new Error(
+                            "Interrupted while waiting for initialization", e);
+                }
+            }
+        } catch (Exception e) {
+            accumulator.close();
+            throw e;
+        }
+        return new Fortuna(new Generator(), pools, accumulator);
+    }
 
-	private Fortuna(Generator generator, Pool[] pools) {
-		this.generator = generator;
-		this.pools = pools;
-	}
+
+    private Fortuna(Generator generator, Pool[] pools, Accumulator ac) {
+        this.generator = generator;
+        this.pools = pools;
+        this.accumulator = ac;
+    }
 
 	private byte[] randomData(int bytes) {
 		lock.lock();
@@ -109,5 +118,11 @@ public class Fortuna extends Random {
 	public synchronized void setSeed(long seed) {
 		// Does not do anything
 	}
+	
+	@Override
+    	public void close() {
+        	this.accumulator.close();
+    	}
+
 
 }
